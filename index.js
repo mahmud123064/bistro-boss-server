@@ -13,7 +13,7 @@ app.use(express.json())
 ////////////////////////// MongoDb code  //////////////
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6rkaped.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -33,17 +33,48 @@ async function run() {
 
     const menuCollecction = client.db('bistroDb').collection('menu');
     const reviewCollecction = client.db('bistroDb').collection('reviews');
+    const cartCollection = client.db("bistroDb").collection("cart");
 
 
-    app.get('/menu', async(req, res)=>{
+    app.get('/menu', async (req, res) => {
       const result = await menuCollecction.find().toArray();
       res.send(result);
     })
 
-    app.get('/reviews', async(req, res)=>{
+    app.get('/reviews', async (req, res) => {
       const result = await reviewCollecction.find().toArray();
       res.send(result);
     })
+
+    ////////// Cart collection api ///////////
+
+    app.get("/carts", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        res.send([])
+      }
+      const query = { email: email }
+      const result = await cartCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    app.post("/carts", async (req, res) => {
+      const item = req.body;
+      console.log(item);
+      const result = await cartCollection.insertOne(item)
+      res.send(result)
+
+    })
+
+    app.delete('/carts/:id', async(req, res)=>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await cartCollection.deleteOne(query)
+      console.log(result);
+      res.send(result);
+    })
+
+
 
 
     // Send a ping to confirm a successful connection
@@ -66,3 +97,21 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log("server is running on port: ", port);
 })
+
+
+
+
+/**
+ * -------------------------------
+ * Naming Convention
+ * -------------------------------
+ * 
+ * 1. user : collection
+ * app.get("/users")
+ * app.get("/users/:id")
+ * app.post("/users")
+ * app.patch("/users/:id")
+ * app.put("/users/:id")
+ * app.delete("/users/:id")
+ * 
+ * **/ 
