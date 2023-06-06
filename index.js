@@ -61,8 +61,25 @@ async function run() {
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
       res.send({ token })
     })
+
+    /*
+    * 1. use jwt token : verifyJWT
+      2. do not show secure links to those who should no see the links 
+      3. use admin verify middleware
+    */
+
+const verifyAdmin = async(req, res, next) => {
+  const email = req.decoded.email;
+  const query = { email : email } 
+  const user = await usersCollection.findOne(query)
+if(user?. role !== "admin"){
+  return res.status(403).send({ error : true, message: "forbidden message" })
+}
+next()
+}
+
     //user related apis
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
@@ -84,11 +101,11 @@ async function run() {
     // security laywer : verifyJWT
     // same email
     // check admin
-     
+
     app.get('/users/admin/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
 
-      if (req.decoded.email != email) {
+      if (req.decoded.email !== email) {
         res.send({ admin: false })
       }
       const query = { email: email };
@@ -117,6 +134,12 @@ async function run() {
       res.send(result);
     })
 
+    app.post("/menu", async(req, res)=> {
+      const newItem = req.body;
+      const result = await menuCollecction.insertOne(newItem)
+      res.send(result)
+    })
+
     // review related apis
     app.get('/reviews', async (req, res) => {
       const result = await reviewCollecction.find().toArray();
@@ -132,8 +155,8 @@ async function run() {
       }
 
       const decodedEmail = req.decoded.email;
-      if (!email == decodedEmail) {
-        return res.status(403).send({ error: true, message: "providen access" })
+      if (email !== decodedEmail) {
+        return res.status(403).send({ error: true, message: "forbidden access" })
       }
       const query = { email: email }
       const result = await cartCollection.find(query).toArray()
